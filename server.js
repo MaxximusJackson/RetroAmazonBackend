@@ -1,15 +1,20 @@
 import express from 'express';
 import { BookRouter } from './routes/api/book.js';
+import { UserRouter } from './routes/api/user.js';
 import * as dotenv from 'dotenv';
 dotenv.config();
+import * as dbModule from './database.js';
 
 import debug from 'debug';
 const debugServer = debug('app:Server');
+
+dbModule.connect();
 
 const app = express();
 
 app.use(express.urlencoded({extended: true}));
 app.use('/api/books', BookRouter);
+app.use('/api/users', UserRouter);
 
 app.use((req, res) => {
   res.status(404).json({error: `Sorry couldn't find ${req.originalUrl}`});

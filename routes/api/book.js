@@ -1,75 +1,108 @@
 import express from 'express';
 import debug from 'debug';
-const debugServer = debug('app:book');
+const debugBook = debug('app:Book');
+import { connect,getBooks,getBookById, updateBook, addBook, deleteBook } from '../../database.js';
+import {validId} from '../../middleware/validId.js';
+import { validBody } from '../../middleware/validBody.js';
+import Joi from 'joi';
+
 const router = express.Router();
 
-const books = [
-  {"title": "Collector, The (Komornik)","author": "Hamlen Yarnell","publication_date": "12/4/1921","genre": "fiction","_id": 1}, 
-  {"title": "Smiling Lieutenant, The","author": "Jeramey MacLeod","publication_date": "12/23/1906","genre": "non-fiction","_id": 2}, 
-  {"title": "Man Who Laughs, The","author": "Giuditta Penna","publication_date": "5/22/1934","genre": "mystery","_id": 3}, 
-  {"title": "New Country, The (Det nya landet)","author": "Dasi Martland","publication_date": "2/15/1916","genre": "romance","_id": 4}, 
-  {"title": "Sapphire","author": "Lambert Nairn","publication_date": "12/13/1926","genre": "mystery","_id": 5}
-]
-
-router.get('/list', (req, res) => {
-  res.status(200).json(books);
+const newBookSchema = Joi.object({
+  isbn:Joi.string().trim().min(14).required(),
+  title:Joi.string().trim().min(1).required(),
+  author:Joi.string().trim().min(1).required(),
+  genre:Joi.string().valid('Fiction', 'Magical Realism', 'Dystopian', 'Mystery', 'Young Adult', 'Non-Fiction').required(),
+  publication_year:Joi.number().integer().min(1900).max(2023).required(),
+  price:Joi.number().min(0).required(),
+  description:Joi.string().trim().min(1).required(),
 });
 
-router.get('/:id', (req, res) => {
-  const id = req.params.id;
-  const book = books.find(book => book._id == id);
-  if(book){
-    res.status(200).send(book);
-  } else {
-    res.status(404).send({message: `Book ${id} not found`});
+const updateBookSchema = Joi.object({
+  isbn:Joi.string().trim().min(14),
+  title:Joi.string().trim().min(1),
+  author:Joi.string().trim().min(1),
+  genre:Joi.string().valid('Fiction', 'Magical Realism', 'Dystopian', 'Mystery', 'Young Adult', 'Non-Fiction'),
+  publication_year:Joi.number().integer().min(1900).max(2023),
+  price:Joi.number().min(0),
+  description:Joi.string().trim().min(1),
+})
+
+router.get('/list', async (req, res) => {
+  debugBook("Getting all books");
+  try {
+    const db = await getBooks();
+    const books = await getBooks();
+  res.status(200).json(books);
+  } catch (error) {
+    res.status(500).json({error: error.stack});
   }
 });
 
-router.put('/:id', (req, res) => {
-  const id = req.params.id;
-  const currentBook = books.find(book => book._id == id);
+router.get('/:id',validId('id'), async (req, res) => {
+  const id = req.id;
+  try {
+    const book = await getBookById(id);
+    if(book){
+      res.status(200).json(book);
+    }else{
+      res.status(404).json({message: `Book ${id} not found`});
+    }
+   
+  } catch (error) {
+    res.status(500).json({error: error.stack});
+  }
+});
+
+router.put('/update/:id',validId('id'), validBody(updateBookSchema), async (req, res) => {
+  const id = req.id;
   const updatedBook = req.body;
 
-  if(currentBook){
-    for(const key in updatedBook){
-      if(currentBook[key] != updatedBook[key]){
-        currentBook[key] = updatedBook[key]
-      }
-    }
-    const index = books.findIndex(book => book._id == id);
-    if(index != -1){
-      books[index] = currentBook;
-    }
-    res.status(200).send(`Book ${id} updated`);
-  } else {
-    res.status(400).send({message: `Book ${id} not found`});
+  if(updatedBook.price){
+    updatedBook.price = parseFloat(updatedBook.price);
   }
-
-  res.json(updatedBook);
+  try {
+    const updateResult = await updateBook(id, updatedBook);
+    if (updateResult.modifiedCount == 1) {
+      res.status(200).json({message: `Book ${id} updated`});
+    } else {
+      res.status(400).json({message: `Book ${id} not updated`});
+    }
+  } catch (err) {
+    res.status(500).json({error: err.stack});
+  }
+  
 });
 
-router.post('/add', (req, res) => {
+router.post('/add',validBody(newBookSchema), async (req, res) => {
   const newBook = req.body;
-
-  if(newBook){
-  const id = books.length + 1;
-  newBook._id = id;
-  books.push(newBook);
-  res.status(200).json({message: `Book ${newBook.title} added`});
-  } else {
-    res.status(400).json({message: `Error in adding book`});
+  const dbResult = await addBook(newBook);
+  try{
+  if(dbResult.acknowledged == true){
+    res.status(200).json({message: `Book ${newBook.title} added`});
+  }else{
+    res.status(400).json({message: `Book ${newBook.title} not added`});
   }
+}catch(err){
+  res.status(500).json({error: err.stack});
+}
 });
 
-router.delete('/:id', (req, res) => {
-  const id = req.params.id;
-  const index = books.findIndex(book => book._id == id);
-  if(index != -1){
-    books.splice(index,1);
-    res.status(200).json(`Book ${id} deleted`);
-  } else {
-    res.status(400).json({message: `Book ${id} not found`});
+router.delete('/delete/:id',validId('bookId'), async(req, res) => {
+  const id = req.id;
+  
+  try {
+    const dbResult = await deleteBook(id);
+
+    if (dbResult.deletedCount == 1) {
+      res.status(200).json({message: `Book ${id} deleted`});
+    }else{
+      res.status(400).json({message: `Book ${id} not deleted`});
+    }
+  } catch (err) {
+    res.status(500).json({error: err.stack});
   }
+  
 });
 
 export {router as BookRouter};
