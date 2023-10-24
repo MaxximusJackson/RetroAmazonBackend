@@ -1,7 +1,7 @@
 import express from 'express';
 import debug from 'debug';
 const debugBook = debug('app:Book');
-import { connect,getBooks,getBookById, updateBook, addBook, deleteBook } from '../../database.js';
+import { connect,getBooks,getBookById, updateBook, addBook, deleteBook, saveEdit } from '../../database.js';
 import {validId} from '../../middleware/validId.js';
 import { validBody } from '../../middleware/validBody.js';
 import Joi from 'joi';
@@ -23,7 +23,7 @@ const updateBookSchema = Joi.object({
   isbn:Joi.string().trim().min(14),
   title:Joi.string().trim().min(1),
   author:Joi.string().trim().min(1),
-  genre:Joi.string().valid('Fiction', 'Magical Realism', 'Dystopian', 'Mystery', 'Young Adult', 'Non-Fiction'),
+  genre:Joi.string().valid('Fiction', 'Magical Realism', 'Dystopian', 'Mystery', 'Young Adult', 'Non-Fiction', 'Adventure'),
   publication_year:Joi.number().integer().min(1900).max(2023),
   price:Joi.number().min(0),
   description:Joi.string().trim().min(1),
@@ -67,6 +67,14 @@ router.put('/update/:id', isLoggedIn(), validId('id'), validBody(updateBookSchem
   try {
     const updateResult = await updateBook(id, updatedBook);
     if (updateResult.modifiedCount == 1) {
+      const edit = {
+        timeStamp: new Date(),
+        op: 'Update Book',
+        collection:'Book',
+        target:id,
+        auth:req.auth
+      }
+      await saveEdit(edit);
       res.status(200).json({message: `Book ${id} updated`});
     } else {
       res.status(400).json({message: `Book ${id} not updated`});

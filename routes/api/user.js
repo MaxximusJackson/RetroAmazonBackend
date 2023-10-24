@@ -139,6 +139,14 @@ router.put('/update/:id', isLoggedIn(), validId('id'), validBody(updateUserSchem
     }
     const dbResult = await updateUser(user);
     if(dbResult.modifiedCount == 1){
+      const edit = {
+        timeStamp: new Date(),
+        op: 'Admin Update User',
+        collection:'User',
+        target:user._id,
+        auth:req.auth
+      }
+      await saveEdit(edit);
       res.status(200).json({message: `User ${req.id} updated`});
       return;
     }else {
