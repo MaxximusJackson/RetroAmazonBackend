@@ -5,6 +5,7 @@ import { connect,getBooks,getBookById, updateBook, addBook, deleteBook } from '.
 import {validId} from '../../middleware/validId.js';
 import { validBody } from '../../middleware/validBody.js';
 import Joi from 'joi';
+import {isLoggedIn} from '@merlin4/express-auth';
 
 const router = express.Router();
 
@@ -28,8 +29,8 @@ const updateBookSchema = Joi.object({
   description:Joi.string().trim().min(1),
 })
 
-router.get('/list', async (req, res) => {
-  debugBook("Getting all books");
+router.get('/list', isLoggedIn(), async (req, res) => {
+ 
   try {
     const db = await getBooks();
     const books = await getBooks();
@@ -39,7 +40,9 @@ router.get('/list', async (req, res) => {
   }
 });
 
-router.get('/:id',validId('id'), async (req, res) => {
+
+
+router.get('/:id', isLoggedIn(), validId('id'), async (req, res) => {
   const id = req.id;
   try {
     const book = await getBookById(id);
@@ -54,7 +57,7 @@ router.get('/:id',validId('id'), async (req, res) => {
   }
 });
 
-router.put('/update/:id',validId('id'), validBody(updateBookSchema), async (req, res) => {
+router.put('/update/:id', isLoggedIn(), validId('id'), validBody(updateBookSchema), async (req, res) => {
   const id = req.id;
   const updatedBook = req.body;
 
@@ -74,7 +77,7 @@ router.put('/update/:id',validId('id'), validBody(updateBookSchema), async (req,
   
 });
 
-router.post('/add',validBody(newBookSchema), async (req, res) => {
+router.post('/add', isLoggedIn(), validBody(newBookSchema), async (req, res) => {
   const newBook = req.body;
   const dbResult = await addBook(newBook);
   try{
@@ -88,7 +91,7 @@ router.post('/add',validBody(newBookSchema), async (req, res) => {
 }
 });
 
-router.delete('/delete/:id',validId('bookId'), async(req, res) => {
+router.delete('/delete/:id', isLoggedIn(), validId('bookId'), async(req, res) => {
   const id = req.id;
   
   try {

@@ -4,6 +4,7 @@ import debug from "debug";
 const debugDatabase = debug("app:Database");
 
 let _db = null;
+const newId = (str) => new ObjectId(str);
 
 async function connect(){
   if(!_db){
@@ -64,7 +65,31 @@ async function loginUser(user){
   return resultUser;
 }
 
+async function getAllUsers(){
+  const db = await connect();
+  const users = await db.collection("User").find().toArray();
+  return users;
+}
+
+async function getUserById(id){
+  const db = await connect();
+  const user = await db.collection("User").findOne({_id: id});
+  return user;
+}
+
+async function updateUser(user){
+  const db = await connect();
+  const result = await db.collection("User").updateOne({_id:user._id}, {$set:{...user}});
+  return result;
+}
+
+async function saveEdit(edit){
+  const db = await connect();
+  const result = await db.collection("Edit").insertOne(edit);
+  return result;
+}
+
 ping();
 //getBooks();
 
-export {connect, ping, getBooks, getBookById, addBook, updateBook, deleteBook, addUser, loginUser}
+export {connect, ping, getBooks, getBookById, addBook, updateBook, deleteBook, addUser, loginUser, newId, getAllUsers, getUserById, updateUser, saveEdit}
