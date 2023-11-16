@@ -29,7 +29,7 @@ const updateBookSchema = Joi.object({
   description:Joi.string().trim().min(1),
 })
 
-router.get('/list', isLoggedIn(), async (req, res) => {
+router.get('/list',  async (req, res) => {
  
   try {
     const db = await getBooks();

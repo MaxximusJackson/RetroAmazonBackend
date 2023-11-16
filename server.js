@@ -4,6 +4,7 @@ import { UserRouter } from './routes/api/user.js';
 import * as dotenv from 'dotenv';
 dotenv.config();
 import * as dbModule from './database.js';
+import cors from 'cors';
 
 import debug from 'debug';
 const debugServer = debug('app:Server');
@@ -13,7 +14,9 @@ import {authMiddleware} from '@merlin4/express-auth';
 dbModule.connect();
 
 const app = express();
+app.use(cors());
 app.use(cookieParser());
+
 app.use(express.urlencoded({extended: true}));
 app.use(authMiddleware(process.env.JWT_SECRET, 'authToken', {
   httpOnly:true,
