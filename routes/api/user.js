@@ -92,10 +92,20 @@ router.post('/login', validBody(loginUserSchema), async (req, res) => {
   if (resultUser && await bcrypt.compare(user.password, resultUser.password)) {
     const authToken = await issueAuthToken(resultUser);
     issueAuthCookie(res, authToken);
-    res.status(200).json(`Welcome ${resultUser.fullName}. Your auth token is ${authToken}.`);
+    res.status(200).json({
+      message: `Welcome ${resultUser.fullName}`,
+      authToken:authToken,
+      email:resultUser.email,
+      fullName:resultUser.fullName,
+    });
   }else{
     res.status(400).json(`email or password incorrect`);
   }
+});
+
+router.post('/logout', isLoggedIn(), async (req,res) => {
+  res.clearCookie('authToken');
+  res.status(200).json({message:'Logged out'});
 });
 
 router.put('/update/me', isLoggedIn(), validBody(updateUserSchema), async (req,res) => {

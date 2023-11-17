@@ -14,7 +14,11 @@ import {authMiddleware} from '@merlin4/express-auth';
 dbModule.connect();
 
 const app = express();
-app.use(cors());
+app.use(express.json());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 app.use(cookieParser());
 
 app.use(express.urlencoded({extended: true}));
